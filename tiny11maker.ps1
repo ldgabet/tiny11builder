@@ -38,11 +38,12 @@ if (! $myWindowsPrincipal.IsInRole($adminRole)) {
     exit
 }
 
-# Start the transcript and prepare the window
-
 # Generate a unique log file name with the date and time
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $logFile = "$PSScriptRoot\tiny11_$timestamp.log"
+
+# Start the transcript and prepare the window
+Start-Transcript -Path $logFile
 
 $Host.UI.RawUI.WindowTitle = "Tiny11 image creator"
 
