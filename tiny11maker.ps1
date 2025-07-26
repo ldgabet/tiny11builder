@@ -42,10 +42,12 @@ if (! $myWindowsPrincipal.IsInRole($adminRole))
     exit
 }
 
-
+# Generate a unique log file name with the date and time
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$logFile = "$PSScriptRoot\tiny11_$timestamp.log"
 
 # Start the transcript and prepare the window
-Start-Transcript -Path "$ScratchDisk\tiny11.log" 
+Start-Transcript -Path "$logFile"
 
 $Host.UI.RawUI.WindowTitle = "Tiny11 image creator"
 Clear-Host
@@ -137,7 +139,41 @@ $packages = & 'dism' '/English' "/image:$($ScratchDisk)\scratchdir" '/Get-Provis
             $matches[1]
         }
     }
-$packagePrefixes = 'Clipchamp.Clipchamp_', 'Microsoft.BingNews_', 'Microsoft.BingWeather_', 'Microsoft.GamingApp_', 'Microsoft.GetHelp_', 'Microsoft.Getstarted_', 'Microsoft.MicrosoftOfficeHub_', 'Microsoft.MicrosoftSolitaireCollection_', 'Microsoft.People_', 'Microsoft.PowerAutomateDesktop_', 'Microsoft.Todos_', 'Microsoft.WindowsAlarms_', 'microsoft.windowscommunicationsapps_', 'Microsoft.WindowsFeedbackHub_', 'Microsoft.WindowsMaps_', 'Microsoft.WindowsSoundRecorder_', 'Microsoft.Xbox.TCUI_', 'Microsoft.XboxGamingOverlay_', 'Microsoft.XboxGameOverlay_', 'Microsoft.XboxSpeechToTextOverlay_', 'Microsoft.YourPhone_', 'Microsoft.ZuneMusic_', 'Microsoft.ZuneVideo_', 'MicrosoftCorporationII.MicrosoftFamily_', 'MicrosoftCorporationII.QuickAssist_', 'MicrosoftTeams_', 'Microsoft.549981C3F5F10_'
+$packagePrefixes = @(
+    'Clipchamp.Clipchamp_',
+    'Microsoft.BingNews_',
+    'Microsoft.BingWeather_',
+    'Microsoft.GamingApp_',
+    'Microsoft.GetHelp_',
+    'Microsoft.Getstarted_',
+    'Microsoft.MicrosoftOfficeHub_',
+    'Microsoft.MicrosoftSolitaireCollection_',
+    'Microsoft.People_',
+    'Microsoft.PowerAutomateDesktop_',
+    'Microsoft.Todos_',
+    'Microsoft.WindowsAlarms_',
+    'microsoft.windowscommunicationsapps_',
+    'Microsoft.WindowsFeedbackHub_',
+    'Microsoft.WindowsMaps_',
+    'Microsoft.WindowsSoundRecorder_',
+    'Microsoft.Xbox.TCUI_',
+    'Microsoft.XboxGamingOverlay_',
+    'Microsoft.XboxGameOverlay_',
+    'Microsoft.XboxSpeechToTextOverlay_',
+    'Microsoft.YourPhone_',
+    'Microsoft.ZuneMusic_',
+    'Microsoft.ZuneVideo_',
+    'MicrosoftCorporationII.MicrosoftFamily_',
+    'MicrosoftCorporationII.QuickAssist_',
+    'MicrosoftTeams_',
+    'Microsoft.549981C3F5F10_',
+    'MSTeams_',
+    'Microsoft.OutlookForWindows_',
+    'Microsoft.Windows.DevHome_',
+    'Microsoft.BingSearch_',
+    'MicrosoftWindows.Client.WebExperience_',
+    'Microsoft.MicrosoftStickyNotes_'
+)
 
 $packagesToRemove = $packages | Where-Object {
     $packageName = $_
@@ -147,6 +183,19 @@ foreach ($package in $packagesToRemove) {
     & 'dism' '/English' "/image:$($ScratchDisk)\scratchdir" '/Remove-ProvisionedAppxPackage' "/PackageName:$package"
 }
 
+Write-Host "Performing removal of legacy windows features..."
+# Remove Legacy Windows Features
+$capabilitiesToRemove = @(
+    'Browser.InternetExplorer',
+    'MathRecognizer',
+    'Microsoft.Windows.PowerShell.ISE',
+    'App.StepsRecorder',
+    'Media.WindowsMediaPlayer',
+    'Windows.WorkFolders.Client'
+)
+foreach ($capability in $capabilitiesToRemove) {
+    Remove-WindowsCapability -Path "$ScratchDisk\scratchdir" -Name $capability -ErrorAction SilentlyContinue | Out-Null
+}
 
 Write-Host "Removing Edge:"
 Remove-Item -Path "$ScratchDisk\scratchdir\Program Files (x86)\Microsoft\Edge" -Recurse -Force | Out-Null
@@ -264,6 +313,8 @@ Write-Host "Prevents installation or DevHome and Outlook:"
 & 'reg' 'add' 'HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Orchestrator\UScheduler\DevHomeUpdate' '/v' 'workCompleted' '/t' 'REG_DWORD' '/d' '1' '/f' | Out-Null
 & 'reg' 'delete' 'HKLM\zSOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\OutlookUpdate' '/f' | Out-Null
 & 'reg' 'delete' 'HKLM\zSOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\DevHomeUpdate' '/f' | Out-Null
+Write-Host "Removes OneDrive Setup at Startup:"
+& 'reg' 'delete' 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Run\' '/v' 'OneDriveSetup' '/f' | Out-Null
 
 ## this function allows PowerShell to take ownership of the Scheduled Tasks registry key from TrustedInstaller. Based on Jose Espitia's script.
 function Enable-Privilege {
@@ -464,7 +515,7 @@ if ([System.IO.Directory]::Exists($ADKDepTools)) {
     $OSCDIMG = $localOSCDIMGPath
 }
 
-& "$OSCDIMG" '-m' '-o' '-u2' '-udfver102' "-bootdata:2#p0,e,b$ScratchDisk\tiny11\boot\etfsboot.com#pEF,e,b$ScratchDisk\tiny11\efi\microsoft\boot\efisys.bin" "$ScratchDisk\tiny11" "$PSScriptRoot\tiny11.iso"
+& "$OSCDIMG" '-m' '-o' '-u2' '-udfver102' "-bootdata:2#p0,e,b$ScratchDisk\tiny11\boot\etfsboot.com#pEF,e,b$ScratchDisk\tiny11\efi\microsoft\boot\efisys.bin" "$ScratchDisk\tiny11" "$PSScriptRoot\tiny11_$timestamp.iso"
 
 # Finishing up
 Write-Host "Creation completed! Press any key to exit the script..."
