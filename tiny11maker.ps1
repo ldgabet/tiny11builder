@@ -191,7 +191,8 @@ $capabilitiesToRemove = @(
     'Microsoft.Windows.PowerShell.ISE',
     'App.StepsRecorder',
     'Media.WindowsMediaPlayer',
-    'Windows.WorkFolders.Client'
+    'Windows.WorkFolders.Client',
+    'MicrosoftWindowsPowerShellV2Root'
 )
 foreach ($capability in $capabilitiesToRemove) {
     Remove-WindowsCapability -Path "$ScratchDisk\scratchdir" -Name $capability -ErrorAction SilentlyContinue | Out-Null
@@ -433,7 +434,7 @@ reg unload HKLM\zSCHEMA | Out-Null
 reg unload HKLM\zSOFTWARE
 reg unload HKLM\zSYSTEM | Out-Null
 Write-Host "Cleaning up image..."
-Repair-WindowsImage -Path $ScratchDisk\scratchdir -StartComponentCleanup -ResetBase
+& dism /Cleanup-Image /StartComponentCleanup /ResetBase /Get-Intl "/Image:$($ScratchDisk)\scratchdir" | Out-Null
 Write-Host "Cleanup complete."
 Write-Host ' '
 Write-Host "Unmounting image..."
