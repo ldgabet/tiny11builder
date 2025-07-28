@@ -265,6 +265,26 @@ foreach ($package in $packagesToRemove) {
     & 'dism' '/English' "/image:$($ScratchDisk)\scratchdir" '/Remove-ProvisionedAppxPackage' "/PackageName:$package"
 }
 
+Write-Output "Performing removal of legacy windows features..."
+# Remove Legacy Windows Features
+$capabilitiesToRemove = @(
+    'Browser.InternetExplorer',
+    'MathRecognizer',
+    'Microsoft.Windows.PowerShell.ISE',
+    'App.StepsRecorder',
+    'Media.WindowsMediaPlayer',
+    'Windows.WorkFolders.Client',
+    'MicrosoftWindowsPowerShellV2Root'
+)
+$existingCapabilities = (Get-WindowsCapability -Path "$ScratchDisk\scratchdir").Name
+$capabilitiesFound = $capabilitiesToRemove | Where-Object {
+    $cap = $_
+    $existingCapabilities | Where-Object { $_ -like "*$cap*" }
+}
+foreach ($capability in $capabilitiesFound) {
+    & 'dism' '/English' "/Image:$($ScratchDisk)\scratchdir" '/Remove-Capability' "/CapabilityName:$capability" | Out-Null
+}
+
 Write-Output "Removing Edge:"
 Remove-Item -Path "$ScratchDisk\scratchdir\Program Files (x86)\Microsoft\Edge" -Recurse -Force | Out-Null
 Remove-Item -Path "$ScratchDisk\scratchdir\Program Files (x86)\Microsoft\EdgeUpdate" -Recurse -Force | Out-Null
